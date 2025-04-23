@@ -1,0 +1,52 @@
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://mediflow:your_secure_password@postgres:5432/mediflow_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - medi-flow-network
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=mediflow
+      - POSTGRES_PASSWORD=your_secure_password
+      - POSTGRES_DB=mediflow_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mediflow -d mediflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medi-flow-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - medi-flow-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  medi-flow-network:
+    driver: bridge

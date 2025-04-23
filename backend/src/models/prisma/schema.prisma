@@ -1,15 +1,239 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  binaryTargets = ["native", "linux-musl","linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @unique @default(autoincrement())
+  username      String   @unique
+  email         String   @unique
+  password      String
+  avatar        String   @default("https://www.shutterstock.com/shutterstock/photos/1760295569/display_1500/stock-vector-profile-picture-avatar-icon-vector-1760295569.jpg")
+  role          UserRole
+  contactNumber String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Optional patient-specific details
+  age              Int?
+  gender           Gender?
+  address          String?
+  insuranceCard    String?
+  rationCard       String?
+  permanentIllness String?
+  disabilityStatus String?
+  otp              String?
+  otpExpires       DateTime?
+
+  // Relations
+  registrations    OPDRegistration[]
+  managedHospitals Hospital[]
+  beds             Bed[]
+  doctorInfo       Doctor?
+  ratings          Rating[]
+  refreshTokens    RefreshToken[] // Add this line
+}
+
+model OPDRegistration {
+  id                   Int           @id @default(autoincrement())
+  patientID            Int
+  doctorID             Int?
+  bedID                Int?
+  departmentID         Int?
+  hospitalID           Int
+  name                 String?
+  date                 DateTime
+  paymentStatus        PaymentStatus @default(Pending)
+  symptoms             String?
+  diagnosis            String?
+  prescription         String?
+  followUp             Boolean?      @default(false)
+  followUpDate         DateTime?
+  followUpReason       String?
+  followUpPrescription String?
+  followUpDiagnosis    String?
+  allergies            String?
+  bloodGroup           String?
+  weight               Float?        @default(0.0)
+  OPDTime              String
+  VirtualOPDDate       DateTime?
+  VirtualOPDTime       String?
+  VirtualOPDLink       String?
+  isVirtualOPD         Boolean?      @default(false)
+  VirtualOPDRoomName   String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  // Relations
+  bed        Bed?        @relation(fields: [bedID], references: [id], onDelete: SetNull)
+  patient    User        @relation(fields: [patientID], references: [id])
+  doctor     Doctor?     @relation(fields: [doctorID], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [departmentID], references: [id])
+  hospital   Hospital    @relation(fields: [hospitalID], references: [id])
+
+  @@unique([bedID])
+}
+
+
+model Doctor {
+  id             Int     @id @default(autoincrement())
+  userID         Int     @unique
+  specialization String
+  qualification  String
+  experience     Int
+  hospitalID     Int
+  departmentId   Int
+  isAvailable    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user          User              @relation(fields: [userID], references: [id])
+  hospital      Hospital          @relation(fields: [hospitalID], references: [id], onDelete: Cascade)
+  department    Department        @relation(fields: [departmentId], references: [id])
+  registrations OPDRegistration[]
+  ratings       Rating[]
+}
+
+model Department {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  hospitalID  Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  doctors          Doctor[]
+  hospital         Hospital          @relation(fields: [hospitalID], references: [id])
+  opdRegistrations OPDRegistration[]
+}
+
+model Bed {
+  id             Int       @id @default(autoincrement())
+  bedNumber      String
+  availability   Boolean   @default(true)
+  patientID      Int?
+  registrationID Int?      @unique
+  assignedDate   DateTime  @default(now())
+  hospitalID     Int
+  status         BedStatus
+
+  // Relations
+  hospital          Hospital          @relation(fields: [hospitalID], references: [id])
+  patient           User?             @relation(fields: [patientID], references: [id])
+  availabilityDates BedAvailability[] 
+  opdRegistrations  OPDRegistration[]  
+}
+
+
+model BedAvailability {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  isAvailable Boolean  @default(true)
+  bedID       Int
+
+  // Relations
+  bed Bed @relation(fields: [bedID], references: [id])
+}
+
+model Hospital {
+  id                  Int      @unique @id @default(autoincrement())
+  name                String
+  speciality          String
+  address             String
+  registrationNumber  String   @unique
+  contactNumber       String
+  timings             String
+  totalBeds           Int
+  totalPersonsPerSlot Int
+  hospitalImageUrl    String[]
+  establishedDate     DateTime
+  rating              Float    @default(0.0)
+  isVerified          String   @default("Pending")
+  adminID             Int
+  timeSlots           String[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  admin            User              @relation(fields: [adminID], references: [id])
+  opdRegistrations OPDRegistration[] 
+  doctors          Doctor[]          
+  departments      Department[]      
+  beds             Bed[]             
+  ratings          Rating[]
+  timeslots        Timeslot[]
+}
+
+
+
+model Rating {
+  id         Int      @id @default(autoincrement())
+  rating     Float    @default(0.0)
+  comment    String?
+  createdAt  DateTime @default(now())
+  userID     Int
+  hospitalID Int?
+  doctorID   Int?
+
+  // Relations
+  doctor   Doctor?   @relation(fields: [doctorID], references: [id])
+  user     User      @relation(fields: [userID], references: [id])
+  hospital Hospital? @relation(fields: [hospitalID], references: [id])
+}
+
+model Timeslot {
+  id             Int      @id @default(autoincrement())
+  time           String
+  date           DateTime
+  availableCount Int
+  hospitalID     Int
+  uniqueIdentifier String @unique
+
+  // Relations
+  hospital Hospital @relation(fields: [hospitalID], references: [id])
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum PaymentStatus {
+  Paid
+  Pending
+}
+
+enum BedStatus {
+  Booked
+  Available
+  Occupied
+  Maintenance
+}
+
+enum UserRole {
+  Patient
+  Doctor
+  Admin
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  isValid   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int      @unique
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
 }
