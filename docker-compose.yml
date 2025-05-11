@@ -1,15 +1,30 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:5000
+    depends_on:
+      - backend
+    networks:
+      - medi-flow-network
+
   backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
+      - "5555:5555"  # Add this line for Prisma Studio
     env_file:
       - ./backend/.env
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://mediflow:your_secure_password@postgres:5432/mediflow_db
+      - PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=true
     depends_on:
       postgres:
         condition: service_healthy

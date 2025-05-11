@@ -7,8 +7,12 @@ while ! nc -z postgres 5432; do
 done
 echo "PostgreSQL is ready!"
 
-# Run migrations
-npx prisma migrate deploy
+# Install netcat if not present
+apk add --no-cache netcat-openbsd
+
+# Generate and apply migrations
+echo "Generating initial migration..."
+npx prisma migrate dev --name init
 
 # Start the application
 npm start
