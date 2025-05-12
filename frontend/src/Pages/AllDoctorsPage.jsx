@@ -11,8 +11,8 @@ const AllDoctorsPage = () => {
     useEffect(() => {
         apiClient.get('/doctor/getAllDoctors')
             .then(response => {
-                console.log('All doctors:', response.data);
-                setDoctors(response.data);
+                console.log('All doctors:', response.data.data.doctors.data.doctors);
+                setDoctors(response.data.data.doctors.data.doctors);
             })
             .catch(error => {
                 console.error('There was an error fetching the doctors!', error);
@@ -75,7 +75,7 @@ const AllDoctorsPage = () => {
             </div>
 
             <footer className="bg-transparent text-center py-4 text-white">
-                <p>Powered by Your MedQueu Platform</p>
+                <p>Powered by Your Medi-Flow Platform</p>
             </footer>
         </div>
     );
