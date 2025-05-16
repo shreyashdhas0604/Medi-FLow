@@ -11,21 +11,22 @@ export default function Multihospital() {
   const [allHospitals, setAllHospitals] = useState([]);  // State to store all hospitals data
 
   useEffect(() => {
-    // Fetching the hospital data asynchronously inside useEffect
     const fetchHospitals = async () => {
       try {
         const response = await apiClient.get('/hospital/hospitals');
-        console.log(response.data.message);  // Logging the message from the response
-        setAllHospitals(response.data.message || []);  // Save the hospitals data in state
-        setFilteredHospitals(response.data.message || []);  // Initialize filteredHospitals with the fetched data
+        // Access the data correctly from the response
+        const hospitals = response.data.data.hospitals || [];
+        console.log('Fetched hospitals:', hospitals);
+        setAllHospitals(hospitals);
+        setFilteredHospitals(hospitals);
       } catch (error) {
         console.error("Error fetching hospitals:", error);
         toast.error("Failed to load hospital data.");
       }
     };
 
-    fetchHospitals();  // Call the function to fetch data on component mount
-  }, []);  // Empty dependency array ensures this only runs once when the component mounts
+    fetchHospitals();
+  }, []);
 
   const handleSearch = (query) => {
     const results = allHospitals.filter(hospital =>

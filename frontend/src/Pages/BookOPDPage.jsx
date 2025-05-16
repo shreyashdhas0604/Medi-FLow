@@ -69,7 +69,8 @@ const BookOPDPage = () => {
     const fetchHospitals = async () => {
       try {
         const response = await apiClient.get("/hospital/hospitals");
-        setHospitals(response.data.message || []);
+        console.log("Fetched hospitals:", response.data.data.hospitals );
+        setHospitals(response.data.data.hospitals || []);
       } catch (error) {
         console.error("Error fetching hospitals:", error);
       }
@@ -78,7 +79,8 @@ const BookOPDPage = () => {
     const fetchDoctors = async () => {
       try {
         const response = await apiClient.get("/doctor/getAllDoctors");
-        setDoctors(response.data || []);
+        console.log("Fetched doctors:", response.data.data.doctors.data.doctors );
+        setDoctors(response.data.data.doctors.data.doctors || []);
       } catch (error) {
         console.error("Error fetching doctors:", error);
       }
@@ -87,7 +89,8 @@ const BookOPDPage = () => {
     const fetchPatientData = async () => {
       try {
         const response = await apiClient.get("/user/me");
-        setPatientData(response.data.data);
+        console.log("Fetched patient data:", response.data.data.user); // Log patient data here
+        setPatientData(response.data.data.user);
         console.log("Patient Data:", response.data.data); // Log patient data here
       } catch (error) {
         console.error("Error fetching patient data:", error);
@@ -111,6 +114,7 @@ const BookOPDPage = () => {
         const response = await apiClient.get(
           `/doctor/getDoctor/${formData.doctor}`
         );
+        console.log("Fetched doctor data:", response.data.data.doctor); // Log doctor data here
         setDoctorData(response.data);
         console.log("Doctor Data:", response.data); // Log doctor data here
       } catch (error) {
@@ -123,7 +127,8 @@ const BookOPDPage = () => {
         const response = await apiClient.get(
           `hospital/available-timeslots/${formData.hospital}/${formData.date}`
         );
-        setTimeSlots(response.data.availableTimeSlots.data || []); // Fixed here
+        console.log("Fetched time slots:", response.data.data.availableTimeSlots); // Log time slots here
+        setTimeSlots(response.data.data.availableTimeSlots || []); // Fixed here
         console.log("Time Slots:", response.data.availableTimeSlots.data); // Log time slots here
       } catch (error) {
         console.error("Error fetching time slots:", error);

@@ -20,7 +20,7 @@ export default function Specifichospital() {
     const fetchHospitalData = async () => {
       try {
         const response = await apiClient.get(`/hospital/hospital/${id}`);
-        setHospital(response.data);
+        setHospital(response.data.data.hospital);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching hospital data:", error);
@@ -38,7 +38,7 @@ export default function Specifichospital() {
     const fetchTimeSlots = async () => {
       try {
         const response = await apiClient.get(`/hospital/available-timeslots/${id}/${selectedDate}`);
-        const filteredSlots = response.data.availableTimeSlots.data.filter(
+        const filteredSlots = response.data.data.availableTimeSlots.filter(
           (slot) =>
             slot.availableCount > 0
         );

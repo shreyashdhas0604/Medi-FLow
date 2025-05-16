@@ -42,24 +42,28 @@ const UserRegistrationForm = () => {
   };
 
   useEffect(() => {
-    // Fetch hospitals and departments when the component mounts
     const fetchDropdownData = async () => {
       try {
-        const [hospitalsResponse, departmentsResponse] = await Promise.all([
-          apiClient.get('/hospital/hospitals'),
-          (userDetails.hospitalID && apiClient.get(`/hospital/${userDetails.hospitalID}/departments`)) || null,
-        ]);
-        if(departmentsResponse){
-          setDepartments(departmentsResponse.data.message);
+        // Get hospitals data
+        const hospitalsResponse = await apiClient.get('/hospital/hospitals');
+        setHospitals(hospitalsResponse.data.data.hospitals || []);
+
+        // Only fetch departments if a hospital is selected
+        if (userDetails.hospitalID) {
+          const departmentsResponse = await apiClient.get(`/hospital/${userDetails.hospitalID}/departments`);
+          setDepartments(departmentsResponse.data.data.departments || []);
+        } else {
+          // Reset departments when no hospital is selected
+          setDepartments([]);
         }
-        setHospitals(hospitalsResponse.data.message);
       } catch (error) {
         console.error('Error fetching dropdown data:', error);
+        toast.error('Failed to fetch data');
       }
     };
+
     fetchDropdownData();
-    //make reference to the userDetails.hospitalID to get the departments of the selected hospital
-  }, [ userDetails.hospitalID ]);
+  }, [userDetails.hospitalID]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -421,241 +425,3 @@ const UserRegistrationForm = () => {
 };
 
 export default UserRegistrationForm;
-
-
-
-
-// import React, { useState, useEffect } from 'react';
-// import apiClient from '../api/ApiClient';
-
-// const UserRegistrationForm = () => {
-//   const [userDetails, setUserDetails] = useState({
-//     username: '',
-//     email: '',
-//     password: '',
-//     role: 'Patient', // Default role set to 'Patient'
-//     contactNumber: '',
-//     avatar: '', // Will be set by the image upload
-//     age: '',
-//     gender: '',
-//     address: '',
-//     insuranceCard: '',
-//     rationCard: '',
-//     permanentIllness: '',
-//     disabilityStatus: '',
-//     specialization: '',
-//     qualification: '',
-//     experience: '',
-//     hospitalID: '',
-//     departmentId: '',
-//   });
-//   const [avatarFile, setAvatarFile] = useState(null); // To store selected image file
-//   const [hospitals, setHospitals] = useState([]);
-//   const [departments, setDepartments] = useState([]);
-//   const [loading, setLoading] = useState(false);
-//   const [message, setMessage] = useState({ type: '', text: '' });
-
-//   useEffect(() => {
-//     // Fetch hospitals and departments when the component mounts
-//     const fetchDropdownData = async () => {
-//       try {
-//         const [hospitalsResponse, departmentsResponse] = await Promise.all([
-//           apiClient.get('/hospital/hospitals'),
-//           (userDetails.hospitalID && apiClient.get(`/hospital/${userDetails.hospitalID}/departments`)) || null,
-//         ]);
-//         if(departmentsResponse){
-//           setDepartments(departmentsResponse.data.message);
-//         }
-//         setHospitals(hospitalsResponse.data.message);
-//       } catch (error) {
-//         console.error('Error fetching dropdown data:', error);
-//       }
-//     };
-//     fetchDropdownData();
-//     //make reference to the userDetails.hospitalID to get the departments of the selected hospital
-//   }, [ userDetails.hospitalID ]);
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setUserDetails({
-//       ...userDetails,
-//       [name]: value,
-//     });
-//   };
-
-//   const handleImageChange = (e) => {
-//     const file = e.target.files[0];
-//     if (file) {
-//       setAvatarFile(file);
-//     }
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     setMessage({ type: '', text: '' });
-
-//     try {
-//       const formData = new FormData();
-//       Object.keys(userDetails).forEach((key) => {
-//         formData.append(key, userDetails[key]);
-//       });
-
-//       // Append the avatar image to the form data
-//       if (avatarFile) {
-//         formData.append('avatar', avatarFile);
-//       }
-
-//       await apiClient.post('/user/register', formData, {
-//         headers: { 'Content-Type': 'multipart/form-data' },
-//       });
-
-//       setMessage({ type: 'success', text: 'User registered successfully!' });
-//       setUserDetails({
-//         username: '',
-//         email: '',
-//         password: '',
-//         role: 'Patient', // Reset role to default
-//         contactNumber: '',
-//         avatar: '',
-//         age: '',
-//         gender: '',
-//         address: '',
-//         insuranceCard: '',
-//         rationCard: '',
-//         permanentIllness: '',
-//         disabilityStatus: '',
-//         specialization: '',
-//         qualification: '',
-//         experience: '',
-//         hospitalID: '',
-//         departmentId: '',
-//       });
-//       setAvatarFile(null);
-//     } catch (error) {
-//       setMessage({ type: 'error', text: error.response?.data?.message || 'Something went wrong!' });
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex justify-center items-center py-6">
-//       <div className="w-full max-w-4xl bg-white p-8 rounded-xl shadow-lg">
-//         <h2 className="text-3xl font-bold text-center text-gray-700 mb-6">User Registration</h2>
-//         {message.text && (
-//           <div
-//             className={`text-center p-3 mb-4 ${
-//               message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-//             } rounded-lg`}
-//           >
-//             {message.text}
-//           </div>
-//         )}
-//         <form onSubmit={handleSubmit} className="space-y-6">
-//           {/* Common Fields */}
-//           <div>
-//             <label className="block text-lg font-medium text-gray-600">Role</label>
-//             <select
-//               name="role"
-//               value={userDetails.role}
-//               onChange={handleInputChange}
-//               className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//               required
-//             >
-//               <option value="Patient">Patient</option>
-//               <option value="Doctor">Doctor</option>
-//               <option value="Admin">Admin</option>
-//             </select>
-//           </div>
-
-//           {/* Doctor-Specific Fields */}
-//           {userDetails.role === 'Doctor' && (
-//             <div className="space-y-6">
-//               <div>
-//                 <label className="block text-lg font-medium text-gray-600">Specialization</label>
-//                 <input
-//                   type="text"
-//                   name="specialization"
-//                   value={userDetails.specialization}
-//                   onChange={handleInputChange}
-//                   className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   placeholder="Enter specialization"
-//                   required
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-lg font-medium text-gray-600">Qualification</label>
-//                 <input
-//                   type="text"
-//                   name="qualification"
-//                   value={userDetails.qualification}
-//                   onChange={handleInputChange}
-//                   className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   placeholder="Enter qualification"
-//                   required
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-lg font-medium text-gray-600">Experience (years)</label>
-//                 <input
-//                   type="number"
-//                   name="experience"
-//                   value={userDetails.experience}
-//                   onChange={handleInputChange}
-//                   className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   placeholder="Enter years of experience"
-//                   required
-//                 />
-//               </div>
-//               <div>
-//                 <label className="block text-lg font-medium text-gray-600">Hospital</label>
-//                 <select
-//                   name="hospitalID"
-//                   value={userDetails.hospitalID}
-//                   onChange={handleInputChange}
-//                   className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   required
-//                 >
-//                   <option value="">Select Hospital</option>
-//                   {hospitals.map((hospital) => (
-//                     <option key={hospital.id} value={hospital.id}>
-//                       {hospital.name}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//               <div>
-//                 <label className="block text-lg font-medium text-gray-600">Department</label>
-//                 <select
-//                   name="departmentId"
-//                   value={userDetails.departmentId}
-//                   onChange={handleInputChange}
-//                   className="w-full mt-2 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   required
-//                 >
-//                   <option value="">Select Department</option>
-//                   {departments.map((department) => (
-//                     <option key={department.id} value={department.id}>
-//                       {department.name}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//             </div>
-//           )}
-
-//           <button
-//             type="submit"
-//             className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//             disabled={loading}
-//           >
-//             {loading ? 'Registering...' : 'Register User'}
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default UserRegistrationForm;
