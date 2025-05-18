@@ -102,10 +102,12 @@ const UserRegistrationForm = () => {
         qualification: userDetails.qualification,
         experience: userDetails.experience,
         hospitalID: userDetails.hospitalID,
-        userID: user.data.user.id,
+        userID: user.data.data.user.id,
         departmentId: userDetails.departmentId,
       });
+      console.log("doctor : ", doctor);
     }
+    // Redirect to login page after successful registration
     toast("Registering ...")
     setTimeout(() => {
       navigate('/login')
@@ -131,6 +133,7 @@ const UserRegistrationForm = () => {
     setAvatarFile(null);
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.message || 'Something went wrong!' });
+      console.error('Error registering user:', error);
     } finally {
       setLoading(false);
     }

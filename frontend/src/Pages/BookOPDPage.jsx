@@ -129,7 +129,7 @@ const BookOPDPage = () => {
         );
         console.log("Fetched time slots:", response.data.data.availableTimeSlots); // Log time slots here
         setTimeSlots(response.data.data.availableTimeSlots || []); // Fixed here
-        console.log("Time Slots:", response.data.availableTimeSlots.data); // Log time slots here
+        console.log("Time Slots:", response.data.data.availableTimeSlots); // Log time slots here
       } catch (error) {
         console.error("Error fetching time slots:", error);
       }
