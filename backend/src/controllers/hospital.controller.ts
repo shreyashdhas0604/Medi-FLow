@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ApiResponse } from '../utils/ApiResponse';
 import { HospitalService } from '../services/hospital.service';
 import cloudinaryService from '../utils/cloudinaryService';
+import { time } from 'console';
 
 export class HospitalController {
     private hospitalService: HospitalService;
@@ -12,14 +13,33 @@ export class HospitalController {
 
     public async createHospital(req: any, res: any) {
         try {
-            const { name, address, registrationNumber, contactNumber, adminID } = req.body;
+            const { name, address, registrationNumber, contactNumber, adminID, departments } = req.body;
 
+            console.log("Req body in the createHospitalController : ",req.body);
             // Validation for required fields
-            if (!name || !address || !registrationNumber || !contactNumber || !adminID) {
+            if (!name || !address || !registrationNumber || !contactNumber || !adminID || !departments) {
                 return res.status(400).json(
-                    new ApiResponse(400, null, 'Please provide all the details (name, address, registrationNumber, contactNumber, adminID)')
+                    new ApiResponse(400, null, 'Please provide all the details (name, address, registrationNumber, contactNumber, adminID, departments)')
                 );
             }
+
+            let departmentsData;
+            try {
+                departmentsData = typeof departments === 'string' ? JSON.parse(departments) : departments;
+            } catch (error) {
+                return res.status(400).json(
+                    new ApiResponse(400, null, 'Invalid departments data format')
+                );
+            }
+
+            // Validate departments array
+            if (!Array.isArray(departmentsData) || departmentsData.length === 0) {
+                return res.status(400).json(
+                    new ApiResponse(400, null, 'Please provide at least one department')
+                );
+            }
+
+            req.body.timeSlots = JSON.parse(req.body.timeSlots);
 
             const reqHospitalData = {
                 name: req.body.name,
@@ -30,13 +50,14 @@ export class HospitalController {
                 timings: req.body.timings,
                 totalBeds: parseInt(req.body.totalBeds),
                 totalPersonsPerSlot: parseInt(req.body.totalPersonsPerSlot),
-                timeslots: req.body.timeslots,
                 hospitalImageUrl: req.body.hospitalImageUrl || [],
                 establishedDate: new Date(req.body.establishedDate),
-                rating: parseFloat(req.body.rating),
+                rating: parseFloat(req.body.rating) || 0.0,
                 isVerified: req.body.isVerified || 'pending',
                 adminID: parseInt(req.body.adminID),
-                timeSlots: JSON.parse(req.body.opdTimeslots),
+                //timeslots must be array of strings
+                timeSlots : req.body.timeSlots || [],
+                departments: departmentsData,
             };
 
             // Handle image upload
@@ -61,7 +82,7 @@ export class HospitalController {
 
             const hospital = await this.hospitalService.createHospital(reqHospitalData);
             return res.status(201).json(
-                new ApiResponse(201, hospital, 'Hospital registered successfully. It will be visible once verified.')
+                new ApiResponse(201, hospital, 'Hospital registered successfully with departments. It will be visible once verified.')
             );
         } catch (error: any) {
             console.error('Error in createHospital:', error);
@@ -393,6 +414,64 @@ export class HospitalController {
             console.error('Error in getAvailableTimeSlots:', error);
             return res.status(500).json(
                 new ApiResponse(500, null, error.message || 'Failed to fetch available time slots')
+            );
+        }
+    }
+
+    public async addDepartment(req: any, res: any) {
+        try {
+            const hospitalId = parseInt(req.params.hospitalId);
+            const departmentData = req.body;
+
+            if (!departmentData.name) {
+                return res.status(400).json(
+                    new ApiResponse(400, null, 'Department name is required')
+                );
+            }
+
+            const department = await this.hospitalService.addDepartmentToHospital(hospitalId, departmentData);
+            return res.status(201).json(
+                new ApiResponse(201, { department }, 'Department added successfully')
+            );
+        } catch (error: any) {
+            console.error('Error in addDepartment:', error);
+            return res.status(500).json(
+                new ApiResponse(500, null, error.message || 'Failed to add department')
+            );
+        }
+    }
+
+    public async updateDepartment(req: any, res: any) {
+        try {
+            const hospitalId = parseInt(req.params.hospitalId);
+            const departmentId = parseInt(req.params.departmentId);
+            const departmentData = req.body;
+
+            const department = await this.hospitalService.updateDepartment(hospitalId, departmentId, departmentData);
+            return res.status(200).json(
+                new ApiResponse(200, { department }, 'Department updated successfully')
+            );
+        } catch (error: any) {
+            console.error('Error in updateDepartment:', error);
+            return res.status(500).json(
+                new ApiResponse(500, null, error.message || 'Failed to update department')
+            );
+        }
+    }
+
+    public async deleteDepartment(req: any, res: any) {
+        try {
+            const hospitalId = parseInt(req.params.hospitalId);
+            const departmentId = parseInt(req.params.departmentId);
+
+            await this.hospitalService.deleteDepartment(hospitalId, departmentId);
+            return res.status(200).json(
+                new ApiResponse(200, null, 'Department deleted successfully')
+            );
+        } catch (error: any) {
+            console.error('Error in deleteDepartment:', error);
+            return res.status(500).json(
+                new ApiResponse(500, null, error.message || 'Failed to delete department')
             );
         }
     }

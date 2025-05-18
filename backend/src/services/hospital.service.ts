@@ -1,15 +1,63 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client"; 
 
 const prisma = new PrismaClient();
+
 
 export class HospitalService {
     constructor() {}
 
     public async createHospital(hospitalData: any): Promise<any> {
         try {
+            // Parse timeSlots and departments if they're strings
+            if (typeof hospitalData.timeSlots === 'string') {
+                hospitalData.timeSlots = JSON.parse(hospitalData.timeSlots);
+            }
+
+            // Create the hospital
             const newHospital = await prisma.hospital.create({
-                data: hospitalData
-            });
+                data: {
+                    name: hospitalData.name,
+                    speciality: hospitalData.speciality,
+                    address: hospitalData.address,
+                    registrationNumber: hospitalData.registrationNumber,
+                    contactNumber: hospitalData.contactNumber,
+                    timings: hospitalData.timings,
+                    totalPersonsPerSlot: Number(hospitalData.totalPersonsPerSlot),
+                    establishedDate: new Date(hospitalData.establishedDate),
+                    rating: Number(hospitalData.rating),
+                    isVerified: hospitalData.isVerified,
+                    hospitalImageUrl: hospitalData.hospitalImageUrl,
+                    adminID: Number(hospitalData.adminID),
+                    totalBeds: Number(hospitalData.totalBeds), 
+                },
+            })
+            // add timeSlots
+            if (hospitalData.timeSlots && hospitalData.timeSlots.length > 0) {
+                for (const timeSlot of hospitalData.timeSlots) {
+                    await prisma.timeslot.create({
+                        data: {
+                            hospitalID: newHospital.id,
+                            date: new Date("2000-01-01T10:00:00Z"),
+                            time: timeSlot,
+                            availableCount: hospitalData.totalPersonsPerSlot,
+                            uniqueIdentifier: `${newHospital.id}-${timeSlot}` 
+                        } 
+                    }) 
+                } 
+            }
+
+            // add departments
+            if (hospitalData.departments && hospitalData.departments.length > 0) {
+                for (const department of hospitalData.departments) {
+                    await prisma.department.create({
+                        data: {
+                            name: department.name,
+                            description: department.description,
+                            hospitalID: newHospital.id
+                        }
+                    })
+                }
+            }
             return newHospital;
         } catch (error: any) {
             console.error("Error in createHospital Service:", error);
@@ -17,20 +65,13 @@ export class HospitalService {
         }
     }
 
-    public async getHospitals(query: any = {}): Promise<any> {
-        try {
-            const hospitals = await prisma.hospital.findMany(query);
-            return hospitals;
-        } catch (error: any) {
-            console.error("Error in getHospitals Service:", error);
-            throw new Error(`Failed to fetch hospitals: ${error.message}`);
-        }
-    }
-
     public async getHospitalById(id: number): Promise<any> {
         try {
             const hospital = await prisma.hospital.findUnique({
-                where: { id }
+                where: { id },
+                include: {
+                    departments: true
+                }
             });
             
             if (!hospital) {
@@ -44,68 +85,18 @@ export class HospitalService {
         }
     }
 
-    public async updateHospital(id: number, hospitalData: any): Promise<any> {
+    public async getHospitals(query: any = {}): Promise<any> {
         try {
-            const hospital = await prisma.hospital.findUnique({
-                where: { id }
+            const hospitals = await prisma.hospital.findMany({
+                ...query,
+                include: {
+                    departments: true
+                }
             });
-            
-            if (!hospital) {
-                throw new Error("Hospital not found");
-            }
-            
-            const updatedHospital = await prisma.hospital.update({
-                where: { id },
-                data: hospitalData
-            });
-            
-            return updatedHospital;
+            return hospitals;
         } catch (error: any) {
-            console.error("Error in updateHospital Service:", error);
-            throw new Error(`Failed to update hospital: ${error.message}`);
-        }
-    }
-
-    public async deleteHospital(id: number): Promise<any> {
-        try {
-            const hospital = await prisma.hospital.findUnique({
-                where: { id }
-            });
-            
-            if (!hospital) {
-                throw new Error("Hospital not found");
-            }
-            
-            const deletedHospital = await prisma.hospital.delete({
-                where: { id }
-            });
-            
-            return deletedHospital;
-        } catch (error: any) {
-            console.error("Error in deleteHospital Service:", error);
-            throw new Error(`Failed to delete hospital: ${error.message}`);
-        }
-    }
-
-    public async verifyHospital(id: number): Promise<any> {
-        try {
-            const hospital = await prisma.hospital.findUnique({
-                where: { id }
-            });
-            
-            if (!hospital) {
-                throw new Error("Hospital not found");
-            }
-            
-            const verifiedHospital = await prisma.hospital.update({
-                where: { id },
-                data: { isVerified: "approved" }
-            });
-            
-            return verifiedHospital;
-        } catch (error: any) {
-            console.error("Error in verifyHospital Service:", error);
-            throw new Error(`Failed to verify hospital: ${error.message}`);
+            console.error("Error in getHospitals Service:", error);
+            throw new Error(`Failed to fetch hospitals: ${error.message}`);
         }
     }
 
@@ -460,34 +451,57 @@ export class HospitalService {
 
     public async getAvailableTimeSlots(hospitalId: number, selectedDate: string): Promise<any> {
         try {
-            // Check if hospital exists
+            // Check if hospital exists and get its details
             const hospital = await prisma.hospital.findUnique({
                 where: { id: hospitalId },
-                select: { timeSlots: true, totalPersonsPerSlot: true },
+                select: { totalPersonsPerSlot: true }
             });
             
             if (!hospital) {
                 throw new Error("Hospital not found");
             }
-            
+
+            // Get all timeslots for this hospital on the selected date
             const date = new Date(selectedDate);
-            
+            const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
             const existingTimeslots = await prisma.timeslot.findMany({
                 where: {
                     hospitalID: hospitalId,
-                    date: date,
+                    date: {
+                        gte: startOfDay,
+                        lte: endOfDay
+                    }
                 },
+                orderBy: {
+                    time: 'asc'
+                }
             });
-            
-            const timeslotMap = new Map(
-                existingTimeslots.map((slot) => [slot.time, slot.availableCount])
-            );
-            
-            const availableSlots = hospital.timeSlots.map((time) => ({
-                time,
-                availableCount: timeslotMap.get(time) ?? hospital.totalPersonsPerSlot,
-                date: selectedDate
-            }));
+
+            // Get the default time slots for this hospital
+            const defaultTimeSlots = await prisma.timeslot.findMany({
+                where: {
+                    hospitalID: hospitalId,
+                    date: new Date("2000-01-01T10:00:00Z") // This is our reference date for default slots
+                },
+                select: {
+                    time: true
+                },
+                orderBy: {
+                    time: 'asc'
+                }
+            });
+
+            // Create available slots based on default slots
+            const availableSlots = defaultTimeSlots.map(defaultSlot => {
+                const existingSlot = existingTimeslots.find(slot => slot.time === defaultSlot.time);
+                return {
+                    time: defaultSlot.time,
+                    availableCount: existingSlot?.availableCount ?? hospital.totalPersonsPerSlot,
+                    date: selectedDate
+                };
+            });
             
             return availableSlots;
         } catch (error: any) {
@@ -560,6 +574,176 @@ export class HospitalService {
         } catch (error: any) {
             console.error("Error in deleteRating Service:", error);
             throw new Error(`Failed to delete rating: ${error.message}`);
+        }
+    }
+
+    public async addDepartmentToHospital(hospitalId: number, departmentData: any): Promise<any> {
+        try {
+            const hospital = await prisma.hospital.findUnique({
+                where: { id: hospitalId }
+            });
+            
+            if (!hospital) {
+                throw new Error("Hospital not found");
+            }
+            
+            const newDepartment = await prisma.department.create({
+                data: {
+                    ...departmentData,
+                    hospitalID: hospitalId
+                }
+            });
+            
+            return newDepartment;
+        } catch (error: any) {
+            console.error("Error in addDepartmentToHospital Service:", error);
+            throw new Error(`Failed to add department: ${error.message}`);
+        }
+    }
+
+    public async updateDepartment(hospitalId: number, departmentId: number, departmentData: any): Promise<any> {
+        try {
+            const department = await prisma.department.findFirst({
+                where: { 
+                    id: departmentId,
+                    hospitalID: hospitalId
+                }
+            });
+            
+            if (!department) {
+                throw new Error("Department not found or does not belong to this hospital");
+            }
+            
+            const updatedDepartment = await prisma.department.update({
+                where: { id: departmentId },
+                data: departmentData
+            });
+            
+            return updatedDepartment;
+        } catch (error: any) {
+            console.error("Error in updateDepartment Service:", error);
+            throw new Error(`Failed to update department: ${error.message}`);
+        }
+    }
+
+    public async deleteDepartment(hospitalId: number, departmentId: number): Promise<any> {
+        try {
+            const department = await prisma.department.findFirst({
+                where: { 
+                    id: departmentId,
+                    hospitalID: hospitalId
+                }
+            });
+            
+            if (!department) {
+                throw new Error("Department not found or does not belong to this hospital");
+            }
+            
+            const deletedDepartment = await prisma.department.delete({
+                where: { id: departmentId }
+            });
+            
+            return deletedDepartment;
+        } catch (error: any) {
+            console.error("Error in deleteDepartment Service:", error);
+            throw new Error(`Failed to delete department: ${error.message}`);
+        }
+    }
+
+    public async deleteHospital(id: number): Promise<void> {
+        try {
+            const hospital = await prisma.hospital.findUnique({
+                where: { id }
+            });
+            
+            if (!hospital) {
+                throw new Error("Hospital not found");
+            }
+
+            // Delete associated records first
+            await prisma.$transaction([
+                prisma.department.deleteMany({ where: { hospitalID: id } }),
+                prisma.rating.deleteMany({ where: { hospitalID: id } }),
+                prisma.timeslot.deleteMany({ where: { hospitalID: id } }),
+                prisma.hospital.delete({ where: { id } })
+            ]);
+        } catch (error: any) {
+            console.error("Error in deleteHospital Service:", error);
+            throw new Error(`Failed to delete hospital: ${error.message}`);
+        }
+    }
+
+    public async verifyHospital(id: number): Promise<any> {
+        try {
+            const hospital = await prisma.hospital.findUnique({
+                where: { id }
+            });
+            
+            if (!hospital) {
+                throw new Error("Hospital not found");
+            }
+
+            const updatedHospital = await prisma.hospital.update({
+                where: { id },
+                data: { 
+                    isVerified: 'verified'
+                },
+                include: {
+                    departments: true
+                }
+            });
+            
+            return updatedHospital;
+        } catch (error: any) {
+            console.error("Error in verifyHospital Service:", error);
+            throw new Error(`Failed to verify hospital: ${error.message}`);
+        }
+    }
+
+    public async updateHospital(id: number, hospitalData: any): Promise<any> {
+        try {
+            const hospital = await prisma.hospital.findUnique({
+                where: { id }
+            });
+            
+            if (!hospital) {
+                throw new Error("Hospital not found");
+            }
+
+            // Handle departments update if included
+            if (hospitalData.departments) {
+                const updatedHospital = await prisma.hospital.update({
+                    where: { id },
+                    data: {
+                        ...hospitalData,
+                        departments: {
+                            deleteMany: {},  // Remove existing departments
+                            create: hospitalData.departments.map((dept: any) => ({
+                                name: dept.name,
+                                description: dept.description || null
+                            }))
+                        }
+                    },
+                    include: {
+                        departments: true
+                    }
+                });
+                return updatedHospital;
+            }
+
+            // Regular update without departments
+            const updatedHospital = await prisma.hospital.update({
+                where: { id },
+                data: hospitalData,
+                include: {
+                    departments: true
+                }
+            });
+            
+            return updatedHospital;
+        } catch (error: any) {
+            console.error("Error in updateHospital Service:", error);
+            throw new Error(`Failed to update hospital: ${error.message}`);
         }
     }
 }

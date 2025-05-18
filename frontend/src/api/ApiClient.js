@@ -26,7 +26,7 @@ const processQueue = (error, token = null) => {
 // Interceptor to attach the access token to requests
 apiClient.interceptors.request.use((config) => {
   const authToken = localStorage.getItem('authToken'); // Get the access token from local storage
-  console.log("authToken in apiClient.interceptors.request.use : ", authToken);
+  // console.log("authToken in apiClient.interceptors.request.use : ", authToken);
   if (authToken) {
     config.headers['Authorization'] = `Bearer ${authToken}`; // Attach the token
   }

@@ -1,6 +1,6 @@
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { UserService } from "../services/user.service.js";
-import cloudinaryService from "../utils/cloudinaryService.js";
+import { ApiResponse } from '../utils/ApiResponse';
+import { UserService } from "../services/user.service";
+import cloudinaryService from "../utils/cloudinaryService";
 import { Request, Response } from "express";
 
 const userService = new UserService();

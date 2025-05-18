@@ -19,7 +19,7 @@ export default function Header() {
     const userData = localStorage.getItem('user');
 
     setIsAuthenticated(!!userData);
-    console.log('User data in Header:', userData);
+    // console.log('User data in Header:', userData);
     setUser(userData ? JSON.parse(userData) : null);
   }, [location]);
 

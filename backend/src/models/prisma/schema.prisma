@@ -159,7 +159,6 @@ model Hospital {
   rating              Float    @default(0.0)
   isVerified          String   @default("Pending")
   adminID             Int
-  timeSlots           String[]
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -170,7 +169,7 @@ model Hospital {
   departments      Department[]      
   beds             Bed[]             
   ratings          Rating[]
-  timeslots        Timeslot[]
+  timeSlots        Timeslot[]
 }
 
 

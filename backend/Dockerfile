@@ -5,8 +5,9 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies and development tools
+RUN npm install && \
+    npm install -g nodemon ts-node typescript
 
 # Create prisma directory and copy schema
 RUN mkdir -p prisma
@@ -19,13 +20,10 @@ RUN npx prisma generate
 COPY tsconfig.json ./
 COPY src/ ./src/
 
-# Build TypeScript
-RUN npm run build
-
-EXPOSE 5000
-
-# Create a startup script
+# Copy startup script
 COPY startup.sh .
 RUN chmod +x startup.sh
 
-CMD ["./startup.sh"]
+# Use ts-node-dev for better TypeScript support in development
+# Replace the last line with this
+CMD ["npx", "nodemon", "--watch", "src", "--ext", "ts,json", "--exec", "ts-node-dev", "--poll", "src/app.ts"]

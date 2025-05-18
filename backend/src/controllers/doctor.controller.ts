@@ -1,9 +1,9 @@
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { DoctorService } from "../services/doctor.service.js";
+import { ApiResponse } from "../utils/ApiResponse";
+import { DoctorService } from "../services/doctor.service";
 import { Request, Response } from "express";
 
 const doctorService = new DoctorService();
-
+ // Define the DoctorController class
 export class DoctorController {
     public async createDoctor(req: any, res: any) {
         try {
