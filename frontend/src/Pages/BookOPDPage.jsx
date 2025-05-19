@@ -3,13 +3,9 @@ import apiClient from "../api/ApiClient";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
-import { hoursToMilliseconds, set } from "date-fns";
+import { useNavigate, useLocation } from "react-router-dom";
+import { hoursToMilliseconds } from "date-fns";
 import VirtualOPD from "../Components/VirtualOPD";
-import { useLocation } from "react-router-dom";
-import { time } from "framer-motion";
-import { form } from "framer-motion/client";
-
 
 const BookOPDPage = () => {
   const [hospitals, setHospitals] = useState([]);
@@ -18,9 +14,13 @@ const BookOPDPage = () => {
   const [hospitalData, setHospitalData] = useState(null);
   const [doctorData, setDoctorData] = useState(null);
   const [timeSlots, setTimeSlots] = useState([]);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  //filling opdData with initial values completely
+  const location = useLocation();
   
+  const { hospital, selectedDate, selectedTimeSlot } = location.state || {};
+  
+  // Initialize form data with default values
   const [formData, setFormData] = useState({
     patientName: "",
     contactNumber: "",
@@ -45,15 +45,14 @@ const BookOPDPage = () => {
     allergies: "",
     bloodGroup: "",
     weight: "",
-    isVirtualOPD: false, // New field for virtual OPD
+    isVirtualOPD: false,
     OPDTime: "",
   });
-  const location = useLocation();
-  const { hospital, selectedDate, selectedTimeSlot } = location.state || {};
-  
+
+  // Set data from location state if available
   useEffect(() => {
     if (hospital) {
-      console.log("selected timeslot : ", selectedTimeSlot);
+      console.log("selected timeslot: ", selectedTimeSlot);
       setFormData((prevFormData) => ({
         ...prevFormData,
         hospital: hospital.id,
@@ -62,92 +61,119 @@ const BookOPDPage = () => {
       }));
     }
   }, [hospital, selectedDate, selectedTimeSlot]);
-  
-  const [errors, setErrors] = useState({});
 
+  // Fetch hospitals
   useEffect(() => {
     const fetchHospitals = async () => {
       try {
         const response = await apiClient.get("/hospital/hospitals");
-        console.log("Fetched hospitals:", response.data.data.hospitals );
+        console.log("Fetched hospitals:", response.data.data.hospitals);
         setHospitals(response.data.data.hospitals || []);
       } catch (error) {
         console.error("Error fetching hospitals:", error);
+        toast.error("Failed to fetch hospitals");
       }
     };
 
+    fetchHospitals();
+  }, []);
+
+  // Fetch doctors when hospital changes
+  useEffect(() => {
     const fetchDoctors = async () => {
+      // Only fetch if hospital ID is available
+      if (!formData.hospital) {
+        setDoctors([]);
+        return;
+      }
+      
       try {
-        const response = await apiClient.get("/doctor/getAllDoctors");
-        console.log("Fetched doctors:", response.data.data.doctors.data.doctors );
-        setDoctors(response.data.data.doctors.data.doctors || []);
+        const response = await apiClient.get(`/doctor/getDoctorsByHospital/${formData.hospital}`);
+        console.log("Fetched doctors 1 :", response.data.data.doctors.data.doctors);
+        // Properly handle the nested data structure
+        if (response.data?.data?.doctors?.data?.doctors) {
+          console.log("Fetched doctors:", response.data.data.doctors.data.doctors);
+          setDoctors(response.data.data.doctors.data.doctors);
+        } else if (response.data?.data?.doctors) {
+          // Alternative path if structure is different
+          console.log("Fetched doctors (alt path):", response.data.data.doctors);
+          setDoctors(response.data.data.doctors);
+        } else {
+          console.log("No doctors found in response", response.data);
+          setDoctors([]);
+        }
       } catch (error) {
         console.error("Error fetching doctors:", error);
+        toast.error("Failed to fetch doctors for this hospital");
+        setDoctors([]);
       }
     };
 
+    fetchDoctors();
+  }, [formData.hospital]);
+
+  // Fetch patient data, hospital data, doctor data and time slots
+  useEffect(() => {
     const fetchPatientData = async () => {
       try {
         const response = await apiClient.get("/user/me");
-        console.log("Fetched patient data:", response.data.data.user); // Log patient data here
+        console.log("Fetched patient data:", response.data.data.user);
         setPatientData(response.data.data.user);
-        console.log("Patient Data:", response.data.data); // Log patient data here
       } catch (error) {
         console.error("Error fetching patient data:", error);
+        toast.error("Failed to fetch your profile data");
       }
     };
 
     const fetchHospitalData = async () => {
+      if (!formData.hospital) return;
+      
       try {
-        const response = await apiClient.get(
-          `/hospital/hospital/${formData.hospital}`
-        );
+        const response = await apiClient.get(`/hospital/hospital/${formData.hospital}`);
+        console.log("Hospital Data:", response.data);
         setHospitalData(response.data);
-        console.log("Hospital Data:", response.data); // Log hospital data here
       } catch (error) {
         console.error("Error fetching hospital data:", error);
+        toast.error("Failed to fetch hospital details");
       }
     };
 
     const fetchDoctorData = async () => {
+      if (!formData.doctor) return;
+      
       try {
-        const response = await apiClient.get(
-          `/doctor/getDoctor/${formData.doctor}`
-        );
-        console.log("Fetched doctor data:", response.data.data.doctor); // Log doctor data here
+        const response = await apiClient.get(`/doctor/getDoctor/${formData.doctor}`);
+        console.log("Fetched doctor data:", response.data.data.doctor);
         setDoctorData(response.data);
-        console.log("Doctor Data:", response.data); // Log doctor data here
       } catch (error) {
         console.error("Error fetching doctor data:", error);
+        toast.error("Failed to fetch doctor details");
       }
     };
 
     const fetchTimeSlots = async () => {
+      if (!formData.hospital || !formData.date) return;
+      
       try {
+        // Format date to match API requirements if needed
+        const dateStr = formData.date.toISOString().split('T')[0];
+        
         const response = await apiClient.get(
-          `hospital/available-timeslots/${formData.hospital}/${formData.date}`
+          `hospital/available-timeslots/${formData.hospital}/${dateStr}`
         );
-        console.log("Fetched time slots:", response.data.data.availableTimeSlots); // Log time slots here
-        setTimeSlots(response.data.data.availableTimeSlots || []); // Fixed here
-        console.log("Time Slots:", response.data.data.availableTimeSlots); // Log time slots here
+        console.log("Fetched time slots:", response.data.data.availableTimeSlots);
+        setTimeSlots(response.data.data.availableTimeSlots || []);
       } catch (error) {
         console.error("Error fetching time slots:", error);
+        toast.error("Failed to fetch available time slots");
       }
     };
-    
 
-
-    // Only fetch patient, hospital, and doctor data when hospitalID and doctorID are set
-    if (formData.hospital | formData.doctor) {
-      fetchPatientData();
-      fetchHospitalData();
-      fetchDoctorData();
-      fetchTimeSlots();
-    }
-
-    fetchHospitals();
-    fetchDoctors();
-  }, [formData.hospital, formData.doctor]); // Correct the dependency array
+    fetchPatientData();
+    fetchHospitalData();
+    fetchDoctorData();
+    fetchTimeSlots();
+  }, [formData.hospital, formData.doctor, formData.date]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -231,13 +257,16 @@ const BookOPDPage = () => {
         originalDate.getUTCMonth(),
         originalDate.getUTCDate()
       ));
+      const opddate = new Date(formData.date);
       const payload = {
-        uniqueIdentifier : `${formData.date}-${formData.OPDTime}-${formData.hospital}`,
+        uniqueIdentifier : `${opddate.toISOString().split("T")[0]}-${formData.OPDTime}-${formData.hospital}`,
         hospitalID: formData.hospital,
         time: timeSlots[selectedTimeSlot]?.time || formData.OPDTime,
         date: updatedDate.toISOString(),
         availableCount: timeSlots[timeslotIndex].availableCount - 1,
       }
+
+      console.log("payload : ",payload);
   
       const updateSlot = await apiClient.post(`/hospital/${formData.hospital}/timeslots`, payload);
       console.log("Timeslot updated:", updateSlot.data);
@@ -272,65 +301,6 @@ const BookOPDPage = () => {
       toast.error("Failed to book OPD. Please try again.");
     }
   };
-  
-
-  // const handleProceed = (e) => {
-  //   e.preventDefault();
-  //   const validationErrors = validateForm();
-  //   if (Object.keys(validationErrors).length > 0) {
-  //     setErrors(validationErrors);
-  //     return;
-  //   }
-
-  //   const patientID = JSON.parse(localStorage.getItem("user"));
-
-  //   const opdData = {
-  //     name: formData.patientName,
-  //     patientID: parseInt(patientID?.id),
-  //     doctorID: parseInt(formData.doctor),
-  //     hospitalID: parseInt(formData.hospital),
-  //     departmentID: formData.department || null,
-  //     bedID: formData.bed || null,
-  //     date: formData.date,
-  //     symptoms: formData.symptoms || "N/A",
-  //     age: formData.age ? parseInt(formData.age) : null,
-  //     gender: formData.gender || null,
-  //     address: formData.address || "N/A",
-  //     insuranceCard: formData.insuranceCard || "N/A",
-  //     rationCard: formData.rationCard || "N/A",
-  //     permanentIllness: formData.permanentIllness || "N/A",
-  //     disabilityStatus: formData.disabilityStatus || "N/A",
-  //     followUp: formData.followUp,
-  //     followUpDate: formData.followUp ? formData.followUpDate : null,
-  //     followUpReason: formData.followUp ? formData.followUpReason : "N/A",
-  //     followUpPrescription: formData.followUp
-  //       ? formData.followUpPrescription
-  //       : "N/A",
-  //     followUpDiagnosis: formData.followUp ? formData.followUpDiagnosis : "N/A",
-  //     allergies: formData.allergies || "N/A",
-  //     bloodGroup: formData.bloodGroup || "N/A",
-  //     weight: formData.weight ? parseFloat(formData.weight) : null,
-  //     isVirtualOPD: formData.isVirtualOPD, // New field for virtual OPD
-  //     OPDTime: formData.OPDTime || null,
-  //   };
-
-  //   if (
-  //     patientData?.id &&
-  //     hospitalData?.id &&
-  //     doctorData?.id &&
-  //     opdData?.name
-  //   ) {
-  //     navigate("/payment", {
-  //       state: {
-  //         patientData,
-  //         hospitalData,
-  //         doctorData,
-  //         opdData,
-  //         paymentStatus: "Pending",
-  //       },
-  //     });
-  //   }
-  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -342,6 +312,9 @@ const BookOPDPage = () => {
 
     const patientID = JSON.parse(localStorage.getItem("user"));
 
+    console.log("selected TimeSlot : ",selectedTimeSlot);
+    console.log("timeslots : ",timeSlots);
+    console.log("formData.OPDTime : ",formData.OPDTime);
     const opdData = {
       name: formData.patientName,
       patientID: parseInt(patientID?.id),
@@ -368,21 +341,13 @@ const BookOPDPage = () => {
       allergies: formData.allergies || "N/A",
       bloodGroup: formData.bloodGroup || "N/A",
       weight: formData.weight ? parseFloat(formData.weight) : null,
-      OPDTime: timeSlots[selectedTimeSlot].time || formData.OPDTime,
+      OPDTime: (selectedTimeSlot ? (timeSlots[selectedTimeSlot].time) : (formData.OPDTime)),
       isVirtualOPD: formData.isVirtualOPD,
       VirtualOPDLink: null,
       VirtualOPDRoomName : null,
     };
 
     const timeslotIndex = timeSlots.findIndex(slot => slot.time === formData.OPDTime);
-
-    // const payload = {
-    //   uniqueIdentifier : `${formData.date}-${formData.OPDTime}-${formData.hospital}`,
-    //   hospitalID: formData.hospital,
-    //   time: timeSlots[selectedTimeSlot].time,
-    //   date: formData.date,
-    //   availableCount: timeSlots[timeslotIndex].availableCount - 1,
-    // }
     const originalDate = new Date(formData.date);
 
 // Reset time to midnight
@@ -391,8 +356,10 @@ const BookOPDPage = () => {
         originalDate.getUTCMonth(),
         originalDate.getUTCDate()
       ));
+
+      const opddate = new Date(formData.date);
       const payload = {
-        uniqueIdentifier : `${formData.date}-${formData.OPDTime}-${formData.hospital}`,
+        uniqueIdentifier : `${opddate.toISOString().split("T")[0]}-${formData.OPDTime}-${formData.hospital}`,
         hospitalID: formData.hospital,
         time: timeSlots[selectedTimeSlot]?.time || formData.OPDTime,
         date: updatedDate.toISOString(),
@@ -457,73 +424,26 @@ const BookOPDPage = () => {
           </div>
           <div>
             <label className="block text-gray-700">Hospital</label>
-            <select
-              name="hospital"
-              value={formData.hospital}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            >
-              <option value="">Select Hospital</option>
-              {hospitals.map((hospital) => (
-                <option key={hospital.id} value={hospital.id}>
-                  {hospital.name}
-                </option>
-              ))}
-            </select>
-            {errors.hospital && (
-              <p className="text-red-500 text-sm">{errors.hospital}</p>
-            )}
-          </div>
-          {/* implementing the timeslot selection only after selecting the hospital */}
-          {/* {selectedTimeSlot !== undefined ? (
-            (selectedTimeSlot !== undefined) && (
-              <div>
-                <label className="block text-gray-700">Time Slot</label>
-                <select
-                  name="OPDTime"
-                  value={formData.OPDTime}
-                  onChange={handleChange}
-                  className="w-full border rounded p-2"
-                >
-                  {timeSlots.length === 0 ? (
-                    <option value="">No Time Slots Available</option>
-                  ) : (
-                    <>
-                      <option value={selectedTimeSlot.id}>
-                        {timeSlots[selectedTimeSlot].time}
-                      </option>
-                    </>
-                  )}
-                </select>
-              </div>
-            )
-          ) : (
 
-          {formData.hospital && (
-            <div>
-            <label className="block text-gray-700">Time Slot</label>
-            <select
-              name="OPDTime"
-              value={formData.OPDTime}
-              onChange={handleChange}
-              className="w-full border rounded p-2"
-            >
-              {timeSlots.length === 0 ? (
-                <option value="">No Time Slots Available</option>
-              ) : (
-                <>
-                  <option value="">Select Time Slot</option>
-                  {timeSlots.map((timeSlot) => (
-                    <option key={timeSlot.id} value={timeSlot.id}>
-                      {timeSlot.time}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
+{/* Fix for hospital options */}
+<select
+  name="hospital"
+  value={formData.hospital}
+  onChange={handleChange}
+  className="w-full border rounded p-2"
+>
+  <option key="default-hospital" value="">Select Hospital</option>
+  {hospitals.map((hospital) => (
+    <option key={`hospital-${hospital.id}`} value={hospital.id}>
+      {hospital.name}
+    </option>
+  ))}
+</select>
+
+{errors.hospital && (
+  <p className="text-red-500 text-sm">{errors.hospital}</p>
+)}
           </div>
-          )}
-          )} */}
           {selectedTimeSlot !== undefined ? (
   <div>
     <label className="block text-gray-700">Time Slot</label>
@@ -534,11 +454,10 @@ const BookOPDPage = () => {
       className="w-full border rounded p-2"
     >
       {timeSlots.length === 0 ? (
-        <option value="">No Time Slots Available</option>
+        <option key="no-slots" value="">No Time Slots Available</option>
       ) : (
-        <option value={selectedTimeSlot.id}>
-          {/* {timeSlots.find((slot) => slot.id === selectedTimeSlot.id)?.time || "Invalid Slot"} */}
-          {timeSlots[selectedTimeSlot].time || "Invalid Slot"}
+        <option key={`slot-${selectedTimeSlot}`} value={selectedTimeSlot}>
+          {timeSlots[selectedTimeSlot]?.time || "Invalid Slot"}
         </option>
       )}
     </select>
@@ -553,12 +472,12 @@ const BookOPDPage = () => {
       className="w-full border rounded p-2"
     >
       {timeSlots.length === 0 ? (
-        <option value="">No Time Slots Available</option>
+        <option key="no-slots" value="">No Time Slots Available</option>
       ) : (
         <>
-          <option value="">Select Time Slot</option>
-          {timeSlots.map((timeSlot) => (
-            <option key={timeSlot.id} value={timeSlot.id}>
+          <option key="default-slot" value="">Select Time Slot</option>
+          {timeSlots.map((timeSlot, index) => (
+            <option key={`slot-${timeSlot.id || index}`} value={timeSlot.id}>
               {timeSlot.time}
             </option>
           ))}

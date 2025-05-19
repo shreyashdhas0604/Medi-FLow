@@ -220,9 +220,92 @@ export class UserService {
         }
     }
 
-    public async getUserById(userId: number): Promise<User | null> {
+    public async getUserById(userId: number): Promise<any | null> {
         return prisma.user.findUnique({
-            where: { id: userId }
+            where: { id: userId },
+            select:{
+                registrations : {
+                    select: {
+                       hospital:true,
+                       date:true,
+                       name:true,
+                       updatedAt:true,
+                    doctor: {
+                        select:{
+                            user:true,
+                            registrations:true,
+                        }
+                    },
+                    OPDTime: true,
+                    isVirtualOPD: true,
+
+                    }
+                },
+                id: true,
+                username: true,
+                email: true,
+                role: true,
+                avatar: true,
+                contactNumber: true,
+                doctorInfo: {
+                    select:{
+                        registrations : {
+                            select: {
+                               hospital:true,
+                               date:true,
+                               name:true,
+                               updatedAt:true,
+                               patient:{
+                                select:{
+                                    username:true,
+                                    avatar:true,
+                                    contactNumber:true,
+                                    permanentIllness:true,
+                                    disabilityStatus:true,
+                                    gender:true,
+                                    age:true,
+                                    insuranceCard:true,
+                                    rationCard:true,
+                                    address:true,
+                                    registrations:true,
+                                    email:true,
+                                    role:true,
+                                }
+                               },
+                            doctor: {
+                                select:{
+                                    user:true,
+                                    registrations:true,
+                                }
+                            },
+                            OPDTime: true,
+                            isVirtualOPD: true,
+
+                            }
+                        },
+                        // allfields to be true
+                        hospital: true,
+                        specialization: true,
+                        experience: true,
+                        isAvailable: true,
+                        qualification: true,
+                         user : true,
+                         department: true,
+                         ratings: true,
+
+
+                    }
+                },
+                disabilityStatus: true,
+                permanentIllness: true,
+                address: true,
+                gender: true,
+                age: true,
+                insuranceCard: true,
+                rationCard: true,
+                managedHospitals: true,
+                ratings: true,
+            }
         });
     }
 

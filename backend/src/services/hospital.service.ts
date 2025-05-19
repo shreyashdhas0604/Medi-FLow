@@ -313,16 +313,15 @@ export class HospitalService {
             const hospital = await prisma.hospital.findUnique({
                 where: { id: hospitalId }
             });
-            
             if (!hospital) {
                 throw new Error("Hospital not found");
             }
             
             const { date, time, availableCount, uniqueIdentifier } = timeSlotData;
-            const slotdate = new Date(date).toISOString();
+            const slotdate = new Date(date);
             
             // Create a unique identifier if one isn't provided
-            const slotIdentifier = uniqueIdentifier || `${hospitalId}-${slotdate}-${time}`;
+            const slotIdentifier = uniqueIdentifier || `${slotdate.toISOString().split("T")[0]}-${time}-${hospitalId}`;
             
             const updateOrCreateTimeslot = await prisma.timeslot.upsert({
                 where: { uniqueIdentifier: slotIdentifier },

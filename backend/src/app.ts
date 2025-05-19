@@ -8,6 +8,7 @@ import { initializeRedis,disconnectRedis } from "./config/redis";
 import { userRouter } from "./routes/user.routes";
 import { doctorRouter } from "./routes/doctor.routes";
 import { hospitalRouter } from "./routes/hospital.routes";
+import {opdRouter} from "./routes/opd.routes";
 dotenv.config();
 
 const app: Express = express();
@@ -31,6 +32,7 @@ async function initializeApp() {
     app.use('/api/user', userRouter);
     app.use('/api/doctor', doctorRouter);
     app.use('/api/hospital',hospitalRouter);
+    app.use('/api/opd',opdRouter);
 
 
 

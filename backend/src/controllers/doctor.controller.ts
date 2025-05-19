@@ -49,7 +49,7 @@ export class DoctorController {
 
     public async getDoctorsByHospital(req: any, res: any) {
         try {
-            const hospitalId = req.params.hospitalId;
+            const hospitalId = parseInt(req.params.hospitalId);
             if (!hospitalId) {
                 return res.status(400).json(
                     new ApiResponse(400, {}, "Hospital ID is required")

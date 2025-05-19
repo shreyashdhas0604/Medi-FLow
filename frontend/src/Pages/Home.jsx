@@ -1,83 +1,3 @@
-// import React from "react";
-// import { Link } from "react-router-dom";
-// import Header from "../Components/Header.jsx";
-// import Footer from "../Components/Footer.jsx";
-
-// const Home = () => {
-//   return (
-//     <div className="min-h-screen flex flex-col bg-gradient-to-r from-blue-500 via-teal-400 to-green-500 text-white">
-//       {/* Header */}
-//       <Header />
-
-//       {/* Hero Section */}
-//       <section className="flex flex-col items-center justify-center py-20 text-center px-6">
-//         <h1 className="text-5xl md:text-6xl font-extrabold mb-6 drop-shadow-lg">
-//           Welcome to OPD Management System
-//         </h1>
-//         <p className="text-lg md:text-xl mb-8">
-//           Streamline healthcare with our modern platform.
-//         </p>
-//         <div className="flex space-x-4">
-//           <Link
-//             to="/book-opd"
-//             className="px-6 py-3 bg-teal-600 text-white rounded-lg shadow-lg hover:bg-teal-700 transition-transform transform hover:scale-105"
-//           >
-//             Book OPD
-//           </Link>
-//           <Link
-//             to="/multi-hospital"
-//             className="px-6 py-3 bg-white text-teal-600 rounded-lg shadow-lg hover:bg-gray-200 transition-transform transform hover:scale-105"
-//           >
-//             Explore Hospitals
-//           </Link>
-//         </div>
-//       </section>
-
-//       {/* Features Section */}
-//       <section className="py-16 bg-white text-gray-700 text-center">
-//         <h2 className="text-4xl font-bold mb-8">Our Features</h2>
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-4 max-w-6xl mx-auto">
-//           {[
-//             {
-//               title: "Virtual OPD",
-//               description: "Seamlessly connect with top doctors online.",
-//               link: "/virtual-opd",
-//             },
-//             {
-//               title: "Hospital Management",
-//               description: "Manage hospital data effortlessly.",
-//               link: "/hospitals",
-//             },
-//             {
-//               title: "Secure Payments",
-//               description: "Experience fast and safe transactions.",
-//               link: "/features#payments",
-//             },
-//           ].map((feature, idx) => (
-//             <Link
-//               key={idx}
-//               to={feature.link}
-//               className="bg-teal-100 p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
-//             >
-//               <h3 className="text-2xl font-bold mb-2 text-teal-600">
-//                 {feature.title}
-//               </h3>
-//               <p>{feature.description}</p>
-//             </Link>
-//           ))}
-//         </div>
-//       </section>
-
-//       {/* Footer */}
-//       <Footer />
-//     </div>
-//   );
-// };
-
-// export default Home;
-
-
-// Home.jsx
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import InfiniteScroll from "react-infinite-scroll-component";
@@ -174,8 +94,14 @@ const Home = () => {
         const doctors1 = await apiClient.get('/doctor/getAllDoctors');
         const allusers = await apiClient.get('/user/getAllUsers');
         // setFeatures(featuresData.data);
-        setAppointments(appointments1.data.data.registrations || appointments1.data.data.doctorInfo.registrations);
-        const arr = (doctors1.data).concat(allusers.data.data);
+        console.log("appointments1: ", appointments1.data.data.user.registrations);
+        console.log("appointments1 of doctor : ", appointments1.data.data.user.doctorInfo?.registrations || []);
+        const appointments2 = appointments1.data.data.user.registrations.concat(appointments1.data.data.user.doctorInfo?.registrations || []);
+        console.log("appointments1: ", appointments2);
+        setAppointments(appointments2);
+        console.log("doctors1: ", doctors1.data.data.doctors.data.doctors);
+        console.log("allusers: ", allusers.data.data.users);
+        const arr = (doctors1.data.data.doctors.data.doctors).concat(allusers.data.data.users);
         setDoctors(arr);
         // setHospitals(hospitalsData.data);
       } catch (error) {
@@ -279,6 +205,7 @@ const Home = () => {
                 <div key={index} className="bg-teal-700 p-6 rounded-lg shadow-md mb-4">
                   <h3 className="text-2xl text-center font-bold mb-2">{new Date(appointment.date).toLocaleDateString()}</h3>
                   <p>Doctor :  {appointment.doctor.user.username}</p>
+                  <p>Patient Name : {appointment.name}</p>
                   <p>Hospital : {appointment.hospital.name}</p>
                   <p>Time : {appointment.OPDTime}</p>
                   <p>OPDType : {(appointment.isVirtualOPD) ? ("Virtual") : ("In Hospital")}</p>

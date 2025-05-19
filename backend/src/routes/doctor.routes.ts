@@ -5,7 +5,7 @@ import { DoctorController } from "../controllers/doctor.controller";
 const doctorRouter = Router();
 const doctorController = new DoctorController();
 
-doctorRouter.post('/register', isAuthenticated, doctorController.createDoctor.bind(doctorController));
+doctorRouter.post('/register', doctorController.createDoctor.bind(doctorController));
 doctorRouter.get('/getDoctors/:departmentId', isAuthenticated, doctorController.getDoctorsByDepartment.bind(doctorController));
 doctorRouter.get('/getDoctorsByHospital/:hospitalId', isAuthenticated, doctorController.getDoctorsByHospital.bind(doctorController));
 doctorRouter.get('/getDoctorsByAvailability/:availability', isAuthenticated, doctorController.getDoctorsByAvailability.bind(doctorController));

@@ -258,7 +258,7 @@ export class UserController {
 
     public async updateProfile(req: any & { user?: any, files?: any }, res: any) {
         try {
-            const { username, email, contactNumber, age, gender, address, insuranceCard, rationCard, permanentIllness, disabilityStatus } = req.body;
+            const { username, email, contactNumber, age, gender, address, insuranceCard, rationCard, permanentIllness, disabilityStatus,role } = req.body;
             const userId = req.user?.userId;
             if (!userId) {
                 return res.status(401).json(
@@ -293,6 +293,7 @@ export class UserController {
                 ...(email && { email }),
                 ...(contactNumber && { contactNumber }),
                 avatar: avatarUrl,
+                ...(role && {role}),
                 ...(age && { age: parseInt(age) }),
                 ...(gender && { gender }),
                 ...(address && { address }),

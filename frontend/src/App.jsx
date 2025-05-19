@@ -19,6 +19,7 @@ import ForgotPassword from "./Pages/ForgotPassword";
 import UserProfile from "./Pages/UserProfile";
 import AllDoctorsPage from "./Pages/AllDoctorsPage";
 import Services from "./Pages/Services";
+import AboutUs from "./Pages/AboutUs";
 // import AboutUs from "./Pages/Aboutus";
 
 function App() {
@@ -43,8 +44,9 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />                // Done
           <Route path="/user-profile1" element={<UserProfile />} />       //Done
           <Route path="/all-doctors" element={<AllDoctorsPage />} />       //Done
-          <Route path="/services" element={<Services />} />      
-          {/* <Route path="/about-us" element={<AboutUs />} />       */}
+          <Route path="/services" element={<Services />} />    
+          <Route path="/about-us" element={<AboutUs />} />
+
 
         </Routes>
       </BrowserRouter>

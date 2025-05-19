@@ -41,7 +41,8 @@ export default function Specifichospital() {
         const filteredSlots = response.data.data.availableTimeSlots.filter(
           (slot) =>
             slot.availableCount > 0
-        );
+        ); 
+        console.log("Filtered Slots:", filteredSlots);
         setTimeSlots(filteredSlots);
       } catch (error) {
         console.error("Error fetching time slots:", error);

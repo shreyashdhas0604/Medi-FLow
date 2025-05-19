@@ -137,6 +137,13 @@ const HospitalRegistrationForm = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
+      //update user to admin for the hospital
+      const userResponse = await apiClient.put('/user/update-profile',{role : 'Admin'},{headers : {
+        'Content-Type': 'application/json',
+      }})
+
+      console.log('User update response:', userResponse.data);
+
       console.log('Hospital registration response:', response.data);
 
       setMessage({ type: 'success', text: 'Hospital registered successfully!' });
